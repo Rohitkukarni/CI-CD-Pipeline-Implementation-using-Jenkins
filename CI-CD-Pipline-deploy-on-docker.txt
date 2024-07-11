@@ -1,0 +1,70 @@
+CI-CD-Pipline
+---------------
+ pipeline {
+    agent any
+    environment {
+        SCANNER_HOME = tool name: 'sonar-scanner'
+        SONAR_HOST_URL = 'http://54.87.178.146:9000' // Replace with your SonarQube server URL
+        SONAR_LOGIN = 'squ_eca07ce7102df98b9315df90cee4d9d9364e996c' // Replace with your valid SonarQube token
+        SONAR_PROJECT_KEY = 'docker-project'
+        SONAR_PROJECT_NAME = 'docker-project'
+        DOCKER_HUB_CREDENTIALS = 'docker' // Replace with your Jenkins credentials ID
+    }
+    stages {
+        stage('pull') {
+            steps {
+                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/jaiswaladi246/java-docker-genie.git'
+            }
+        }
+        stage('build') {
+            tools {
+                jdk 'jdk17'
+                maven 'maven3'
+            }
+            steps {
+                sh "mvn clean install"
+            }
+        }
+        stage('sonar-analysis') {
+            steps {
+                withEnv([
+                    "SCANNER_HOME=${env.SCANNER_HOME}",
+                    "SONAR_HOST_URL=${env.SONAR_HOST_URL}",
+                    "SONAR_LOGIN=${env.SONAR_LOGIN}",
+                    "SONAR_PROJECT_KEY=${env.SONAR_PROJECT_KEY}",
+                    "SONAR_PROJECT_NAME=${env.SONAR_PROJECT_NAME}"
+                ]) {
+                    sh '''
+                        $SCANNER_HOME/bin/sonar-scanner \
+                            -Dsonar.host.url=$SONAR_HOST_URL \
+                            -Dsonar.login=$SONAR_LOGIN \
+                            -Dsonar.projectKey=$SONAR_PROJECT_KEY \
+                            -Dsonar.projectName=$SONAR_PROJECT_NAME \
+                            -Dsonar.java.binaries=. \
+                            -X
+                    '''
+                }
+            }
+        }
+        stage('docker-build') {
+            steps {
+                script {
+                    // Use withDockerRegistry to authenticate Docker commands
+                    withDockerRegistry(credentialsId: 'docker') {
+                        sh 'docker build -t krishna112/java-work .'
+                    }
+                }
+            }
+        }
+    }
+}
+-----------------git-maven-sonarqube-docker---------------------
+
+ --------error---------
+
+1- $ docker login -u krishna112 -p ******** https://index.docker.io/v1/
+WARNING! Using --password via the CLI is insecure. Use --password-stdin.
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Post "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/auth": dial unix /var/run/docker.sock: connect: permission denied
+
+
+2--
